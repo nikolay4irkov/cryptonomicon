@@ -93,7 +93,28 @@
 
       <hr class="w-full border-t border-gray-600 my-4" />
       <div class="border border-black p-4">
-        <input type="text" v-model="filter" />
+        <input
+          type="text"
+          v-model="filter"
+          class=" rounded-sm border border-grey-200"
+        />
+
+        <div class="flex space-x-4">
+          <button
+            v-if="page > 1"
+            @click="page = page - 1"
+            class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+          >
+            Назад
+          </button>
+          <button
+            v-if="isNextPage"
+            @click="page = page + 1"
+            class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+          >
+            Вперед
+          </button>
+        </div>
       </div>
       <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
         <div
@@ -190,11 +211,25 @@ export default {
       tickers: [],
       sel: null,
       graph: [],
-      filter: ""
+      filter: "",
+      page: 1,
+      isNextPage: true
     };
   },
 
   created() {
+    const windowData = Object.fromEntries(
+      new URL(window.location).searchParams.entries()
+    );
+
+    if (windowData.filter) {
+      this.filter = windowData.filter;
+    }
+
+    if (windowData.page) {
+      this.page = windowData.page;
+    }
+
     const tickersList = localStorage.getItem("tickers-list");
 
     if (tickersList) {
@@ -233,7 +268,7 @@ export default {
         if (this.sel?.name === tickerName) {
           this.graph.push(data.USD);
         }
-      }, 5000);
+      }, 15000);
     },
 
     handleDelete(tickerToRemove) {
@@ -255,8 +290,31 @@ export default {
     },
 
     filteredTickers() {
-      return this.tickers.filter(ticker =>
+      const start = (this.page - 1) * 6;
+      const end = this.page * 6;
+      const filteredTickers = this.tickers.filter(ticker =>
         ticker.name.toLowerCase().includes(this.filter.toLowerCase())
+      );
+      this.isNextPage = filteredTickers.length > end;
+
+      return filteredTickers.slice(start, end);
+    }
+  },
+
+  watch: {
+    filter() {
+      this.page = 1;
+      window.history.pushState(
+        null,
+        document.title,
+        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
+      );
+    },
+    page() {
+      window.history.pushState(
+        null,
+        document.title,
+        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
       );
     }
   }
